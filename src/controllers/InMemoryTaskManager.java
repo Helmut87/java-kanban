@@ -1,10 +1,12 @@
 package controllers;
 
 import enums.Status;
+import impl.HistoryManager;
 import impl.TaskManager;
 import model.Epic;
 import model.Subtask;
 import model.Task;
+import utils.Managers;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,15 +14,17 @@ import java.util.List;
 import java.util.Map;
 
 public class InMemoryTaskManager implements TaskManager {
-    private Map<Integer, Task> tasks;
-    private Map<Integer, Epic> epics;
-    private Map<Integer, Subtask> subtasks;
+    private final Map<Integer, Task> tasks;
+    private final Map<Integer, Epic> epics;
+    private final Map<Integer, Subtask> subtasks;
+    private final HistoryManager historyManager;
     private int nextId;
 
     public InMemoryTaskManager() {
         this.tasks = new HashMap<>();
         this.epics = new HashMap<>();
         this.subtasks = new HashMap<>();
+        this.historyManager = Managers.getDefaultHistory();
         this.nextId = 1;
     }
 
@@ -62,7 +66,7 @@ public class InMemoryTaskManager implements TaskManager {
         }
     }
 
-    // Методы для задач
+    // Методы для задач с добавлением истории
     @Override
     public List<Task> getAllTasks() {
         return new ArrayList<>(tasks.values());
@@ -75,7 +79,11 @@ public class InMemoryTaskManager implements TaskManager {
 
     @Override
     public Task getTaskById(int id) {
-        return tasks.get(id);
+        Task task = tasks.get(id);
+        if (task != null) {
+            historyManager.add(task);
+        }
+        return task;
     }
 
     @Override
@@ -97,7 +105,7 @@ public class InMemoryTaskManager implements TaskManager {
         tasks.remove(id);
     }
 
-    // Методы для эпиков
+    // Методы для эпиков с добавлением истории
     @Override
     public List<Epic> getAllEpics() {
         return new ArrayList<>(epics.values());
@@ -105,7 +113,6 @@ public class InMemoryTaskManager implements TaskManager {
 
     @Override
     public void deleteAllEpics() {
-        // Удаляем все подзадачи эпиков
         for (Epic epic : epics.values()) {
             for (int subtaskId : epic.getSubtaskIds()) {
                 subtasks.remove(subtaskId);
@@ -116,7 +123,11 @@ public class InMemoryTaskManager implements TaskManager {
 
     @Override
     public Epic getEpicById(int id) {
-        return epics.get(id);
+        Epic epic = epics.get(id);
+        if (epic != null) {
+            historyManager.add(epic);
+        }
+        return epic;
     }
 
     @Override
@@ -131,7 +142,6 @@ public class InMemoryTaskManager implements TaskManager {
     public void updateEpic(Epic epic) {
         Epic existingEpic = epics.get(epic.getId());
         if (existingEpic != null) {
-            // Сохраняем список подзадач и обновляем только название и описание
             List<Integer> subtaskIds = existingEpic.getSubtaskIds();
             epic.setSubtaskIds(new ArrayList<>(subtaskIds));
             epics.put(epic.getId(), epic);
@@ -143,14 +153,13 @@ public class InMemoryTaskManager implements TaskManager {
     public void deleteEpicById(int id) {
         Epic epic = epics.remove(id);
         if (epic != null) {
-            // Удаляем все подзадачи эпика
             for (int subtaskId : epic.getSubtaskIds()) {
                 subtasks.remove(subtaskId);
             }
         }
     }
 
-    // Методы для подзадач
+    // Методы для подзадач с добавлением истории
     @Override
     public List<Subtask> getAllSubtasks() {
         return new ArrayList<>(subtasks.values());
@@ -167,14 +176,18 @@ public class InMemoryTaskManager implements TaskManager {
 
     @Override
     public Subtask getSubtaskById(int id) {
-        return subtasks.get(id);
+        Subtask subtask = subtasks.get(id);
+        if (subtask != null) {
+            historyManager.add(subtask);
+        }
+        return subtask;
     }
 
     @Override
     public Subtask createSubtask(Subtask subtask) {
         Epic epic = epics.get(subtask.getEpicId());
         if (epic == null) {
-            return null; // Эпик не существует
+            return null;
         }
 
         subtask.setId(generateId());
@@ -221,5 +234,11 @@ public class InMemoryTaskManager implements TaskManager {
             }
         }
         return result;
+    }
+
+    // Новая функциональность - история просмотров
+    @Override
+    public List<Task> getHistory() {
+        return historyManager.getHistory();
     }
 }

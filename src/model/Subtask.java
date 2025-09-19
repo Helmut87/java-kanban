@@ -1,8 +1,9 @@
 package model;
 
 import enums.Status;
+import model.Task;
 
-public class Subtask extends Task{
+public class Subtask extends Task {
     private int epicId;
 
     public Subtask(String name, String description, Status status, int epicId) {
@@ -25,7 +26,7 @@ public class Subtask extends Task{
 
     @Override
     public String toString() {
-        return "model.Subtask{" +
+        return "main.java.model.Subtask{" +
                 "name='" + name + '\'' +
                 ", description='" + description + '\'' +
                 ", id=" + id +
