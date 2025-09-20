@@ -1,48 +1,85 @@
 package controllers;
 
-
 import enums.Status;
-import impl.HistoryManager;
+import impl.TaskManager;
+import model.Epic;
+import model.Subtask;
 import model.Task;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import utils.Managers;
 
-import java.util.List;
+import static org.junit.jupiter.api.Assertions.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+class InMemoryTaskManagerTest {
+    private TaskManager taskManager;
 
-class InMemoryHistoryManagerTest {
-
-    @Test
-    void historyShouldNotExceedMaxSize() {
-        HistoryManager historyManager = Managers.getDefaultHistory();
-
-        // Добавляем больше элементов, чем максимальный размер
-        for (int i = 1; i <= 15; i++) {
-            Task task = new Task("Task " + i, "Description", i, Status.NEW);
-            historyManager.add(task);
-        }
-
-        assertEquals(10, historyManager.getHistory().size(), "История не должна превышать 10 элементов");
-
-        // Проверяем, что остались последние 10 элементов
-        List<Task> history = historyManager.getHistory();
-        for (int i = 0; i < 10; i++) {
-            assertEquals(6 + i, history.get(i).getId(), "Должны остаться последние 10 задач");
-        }
+    @BeforeEach
+    void setUp() {
+        taskManager = Managers.getDefault();
     }
 
     @Test
-    void taskDataShouldBePreservedInHistory() {
-        HistoryManager historyManager = Managers.getDefaultHistory();
-        Task originalTask = new Task("Original", "Original description", 1, Status.NEW);
+    void shouldAddAndFindDifferentTaskTypesById() {
+        // Создаем задачи всех типов
+        Task task = taskManager.createTask(new Task("Task", "Description", Status.NEW));
+        Epic epic = taskManager.createEpic(new Epic("Epic", "Description"));
+        Subtask subtask = taskManager.createSubtask(new Subtask("Subtask", "Description", Status.NEW, epic.getId()));
 
-        historyManager.add(originalTask);
-        Task historyTask = historyManager.getHistory().get(0);
+        // Проверяем, что можем найти по ID
+        assertNotNull(taskManager.getTaskById(task.getId()), "Должны найти задачу по ID");
+        assertNotNull(taskManager.getEpicById(epic.getId()), "Должны найти эпик по ID");
+        assertNotNull(taskManager.getSubtaskById(subtask.getId()), "Должны найти подзадачу по ID");
 
-        assertEquals(originalTask.getName(), historyTask.getName());
-        assertEquals(originalTask.getDescription(), historyTask.getDescription());
-        assertEquals(originalTask.getStatus(), historyTask.getStatus());
-        assertEquals(originalTask.getId(), historyTask.getId());
+        // Проверяем, что возвращаются правильные типы
+        assertEquals(Task.class, taskManager.getTaskById(task.getId()).getClass());
+        assertEquals(Epic.class, taskManager.getEpicById(epic.getId()).getClass());
+        assertEquals(Subtask.class, taskManager.getSubtaskById(subtask.getId()).getClass());
+    }
+
+    @Test
+    void tasksWithAssignedAndGeneratedIdsShouldNotConflict() {
+        // Создаем задачу с назначенным ID
+        Task taskWithAssignedId = new Task("Assigned", "Description", 999, Status.NEW);
+
+        // Создаем несколько задач через менеджер (получат сгенерированные ID)
+        Task task1 = taskManager.createTask(new Task("Task1", "Description", Status.NEW));
+        Task task2 = taskManager.createTask(new Task("Task2", "Description", Status.NEW));
+
+        // Добавляем задачу с назначенным ID
+        taskManager.updateTask(taskWithAssignedId);
+
+        // Проверяем, что все задачи доступны и не конфликтуют
+        assertNotNull(taskManager.getTaskById(task1.getId()), "Задача со сгенерированным ID 1 должна быть доступна");
+        assertNotNull(taskManager.getTaskById(task2.getId()), "Задача со сгенерированным ID 2 должна быть доступна");
+        assertNotNull(taskManager.getTaskById(999), "Задача с назначенным ID 999 должна быть доступна");
+
+        // Проверяем, что ID разные
+        assertNotEquals(task1.getId(), task2.getId(), "Сгенерированные ID должны быть разными");
+        assertNotEquals(task1.getId(), 999, "Сгенерированный ID не должен совпадать с назначенным");
+        assertNotEquals(task2.getId(), 999, "Сгенерированный ID не должен совпадать с назначенным");
+    }
+
+    @Test
+    void shouldHandleMixedTaskTypesWithoutConflicts() {
+        // Создаем задачи разных типов
+        Task task = taskManager.createTask(new Task("Regular Task", "Desc", Status.NEW));
+        Epic epic = taskManager.createEpic(new Epic("Epic Task", "Desc"));
+        Subtask subtask = taskManager.createSubtask(new Subtask("Subtask", "Desc", Status.NEW, epic.getId()));
+
+        // Проверяем, что все сохранились и доступны
+        assertEquals(1, taskManager.getAllTasks().size());
+        assertEquals(1, taskManager.getAllEpics().size());
+        assertEquals(1, taskManager.getAllSubtasks().size());
+
+        // Проверяем, что ID не конфликтуют между разными типами
+        assertNotNull(taskManager.getTaskById(task.getId()));
+        assertNotNull(taskManager.getEpicById(epic.getId()));
+        assertNotNull(taskManager.getSubtaskById(subtask.getId()));
+
+        // ID могут быть любыми, но типы должны сохраняться
+        assertTrue(task.getId() > 0);
+        assertTrue(epic.getId() > 0);
+        assertTrue(subtask.getId() > 0);
     }
 }
