@@ -1,7 +1,7 @@
 package model;
 
 import enums.Status;
-import model.Task;
+import enums.TaskType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,12 +19,17 @@ public class Epic extends Task {
         this.subtaskIds = new ArrayList<>();
     }
 
+    @Override
+    public TaskType getType() {
+        return TaskType.EPIC;
+    }
+
     public List<Integer> getSubtaskIds() {
         return new ArrayList<>(subtaskIds);
     }
 
     public void setSubtaskIds(List<Integer> subtaskIds) {
-        this.subtaskIds = subtaskIds;
+        this.subtaskIds = new ArrayList<>(subtaskIds);
     }
 
     public void addSubtaskId(int subtaskId) {
@@ -41,7 +46,7 @@ public class Epic extends Task {
 
     @Override
     public String toString() {
-        return "main.java.model.Epic{" +
+        return "Epic{" +
                 "name='" + name + '\'' +
                 ", description='" + description + '\'' +
                 ", id=" + id +
@@ -49,6 +54,4 @@ public class Epic extends Task {
                 ", subtaskIds=" + subtaskIds +
                 '}';
     }
-
-
 }

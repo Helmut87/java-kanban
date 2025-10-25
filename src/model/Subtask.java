@@ -1,7 +1,7 @@
 package model;
 
 import enums.Status;
-import model.Task;
+import enums.TaskType;
 
 public class Subtask extends Task {
     private int epicId;
@@ -16,6 +16,12 @@ public class Subtask extends Task {
         this.epicId = epicId;
     }
 
+    // Переопределяем метод getType()
+    @Override
+    public TaskType getType() {
+        return TaskType.SUBTASK;
+    }
+
     public int getEpicId() {
         return epicId;
     }
@@ -26,7 +32,7 @@ public class Subtask extends Task {
 
     @Override
     public String toString() {
-        return "main.java.model.Subtask{" +
+        return "Subtask{" +
                 "name='" + name + '\'' +
                 ", description='" + description + '\'' +
                 ", id=" + id +
