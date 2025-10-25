@@ -1,6 +1,7 @@
 package model;
 
 import enums.Status;
+import enums.TaskType;
 
 import java.util.Objects;
 
@@ -21,6 +22,10 @@ public class Task {
         this.description = description;
         this.id = id;
         this.status = status;
+    }
+
+    public TaskType getType() {
+        return TaskType.TASK;
     }
 
     // Геттеры и сеттеры
@@ -71,7 +76,7 @@ public class Task {
 
     @Override
     public String toString() {
-        return "main.java.model.Task{" +
+        return "Task{" +
                 "name='" + name + '\'' +
                 ", description='" + description + '\'' +
                 ", id=" + id +

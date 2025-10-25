@@ -83,18 +83,8 @@ public class Main {
 
         for (int i = 0; i < history.size(); i++) {
             Task task = history.get(i);
-            String type = getTaskType(task);
-            System.out.println((i + 1) + ". " + type + ": " + task.getName() + " (ID: " + task.getId() + ")");
-        }
-    }
-
-    private static String getTaskType(Task task) {
-        if (task instanceof Epic) {
-            return "Эпик";
-        } else if (task instanceof Subtask) {
-            return "Подзадача";
-        } else {
-            return "Задача";
+            String typeName = task.getType().toString();
+            System.out.println((i + 1) + ". " + typeName + ": " + task.getName() + " (ID: " + task.getId() + ")");
         }
     }
 }
