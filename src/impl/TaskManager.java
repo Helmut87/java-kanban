@@ -7,7 +7,6 @@ import model.Task;
 import java.util.List;
 
 public interface TaskManager {
-    // Методы для задач
     List<Task> getAllTasks();
 
     void deleteAllTasks();
@@ -20,7 +19,6 @@ public interface TaskManager {
 
     void deleteTaskById(int id);
 
-    // Методы для эпиков
     List<Epic> getAllEpics();
 
     void deleteAllEpics();
@@ -33,7 +31,6 @@ public interface TaskManager {
 
     void deleteEpicById(int id);
 
-    // Методы для подзадач
     List<Subtask> getAllSubtasks();
 
     void deleteAllSubtasks();
@@ -46,9 +43,13 @@ public interface TaskManager {
 
     void deleteSubtaskById(int id);
 
-    // Дополнительные методы
     List<Subtask> getSubtasksByEpicId(int epicId);
 
-    // Новая функциональность - история просмотров
     List<Task> getHistory();
+
+    List<Task> getPrioritizedTasks();
+
+    boolean hasTimeOverlap(Task task1, Task task2);
+
+    boolean isTimeOverlappingWithExisting(Task task);
 }

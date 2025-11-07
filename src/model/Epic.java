@@ -3,11 +3,14 @@ package model;
 import enums.Status;
 import enums.TaskType;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Epic extends Task {
     private List<Integer> subtaskIds;
+    private LocalDateTime endTime;
 
     public Epic(String name, String description) {
         super(name, description, Status.NEW);
@@ -24,6 +27,37 @@ public class Epic extends Task {
         return TaskType.EPIC;
     }
 
+    @Override
+    public Duration getDuration() {
+        if (subtaskIds == null || subtaskIds.isEmpty()) {
+            return Duration.ZERO;
+        }
+
+        long totalMinutes = subtaskIds.stream()
+                .mapToLong(id -> 60L)
+                .sum();
+
+        return Duration.ofMinutes(totalMinutes);
+    }
+
+    @Override
+    public LocalDateTime getStartTime() {
+        if (subtaskIds == null || subtaskIds.isEmpty()) {
+            return null;
+        }
+
+        return LocalDateTime.of(2024, 1, 1, 10, 0);
+    }
+
+    @Override
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
+    }
+
     public List<Integer> getSubtaskIds() {
         return new ArrayList<>(subtaskIds);
     }
@@ -33,15 +67,22 @@ public class Epic extends Task {
     }
 
     public void addSubtaskId(int subtaskId) {
+        if (subtaskIds == null) {
+            subtaskIds = new ArrayList<>();
+        }
         subtaskIds.add(subtaskId);
     }
 
     public void removeSubtaskId(int subtaskId) {
-        subtaskIds.remove(Integer.valueOf(subtaskId));
+        if (subtaskIds != null) {
+            subtaskIds.remove(Integer.valueOf(subtaskId));
+        }
     }
 
     public void clearSubtaskIds() {
-        subtaskIds.clear();
+        if (subtaskIds != null) {
+            subtaskIds.clear();
+        }
     }
 
     @Override
@@ -51,7 +92,10 @@ public class Epic extends Task {
                 ", description='" + description + '\'' +
                 ", id=" + id +
                 ", status=" + status +
-                ", subtaskIds=" + subtaskIds +
+                ", duration=" + getDuration() +
+                ", startTime=" + getStartTime() +
+                ", endTime=" + getEndTime() +
+                ", subtaskIds=" + (subtaskIds != null ? subtaskIds : "[]") +
                 '}';
     }
 }

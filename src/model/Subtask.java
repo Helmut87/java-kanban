@@ -3,6 +3,9 @@ package model;
 import enums.Status;
 import enums.TaskType;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+
 public class Subtask extends Task {
     private int epicId;
 
@@ -16,7 +19,22 @@ public class Subtask extends Task {
         this.epicId = epicId;
     }
 
-    // Переопределяем метод getType()
+    public Subtask(String name, String description, Status status, int epicId,
+                   Duration duration, LocalDateTime startTime) {
+        super(name, description, status);
+        this.epicId = epicId;
+        this.duration = duration;
+        this.startTime = startTime;
+    }
+
+    public Subtask(String name, String description, int id, Status status, int epicId,
+                   Duration duration, LocalDateTime startTime) {
+        super(name, description, id, status);
+        this.epicId = epicId;
+        this.duration = duration;
+        this.startTime = startTime;
+    }
+
     @Override
     public TaskType getType() {
         return TaskType.SUBTASK;
@@ -37,6 +55,9 @@ public class Subtask extends Task {
                 ", description='" + description + '\'' +
                 ", id=" + id +
                 ", status=" + status +
+                ", duration=" + duration +
+                ", startTime=" + startTime +
+                ", endTime=" + getEndTime() +
                 ", epicId=" + epicId +
                 '}';
     }
