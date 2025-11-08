@@ -5,73 +5,86 @@ import model.Subtask;
 import model.Task;
 import utils.Managers;
 
+import java.util.List;
+
 public class Main {
     public static void main(String[] args) {
-            TaskManager manager = Managers.getDefault();
+        TaskManager manager = Managers.getDefault();
 
-            System.out.println("=== Создание задач ===");
+        System.out.println("=== Создание задач ===");
 
-            Task task1 = manager.createTask(new Task("Задача 1", "Описание задачи 1", Status.NEW));
-            Task task2 = manager.createTask(new Task("Задача 2", "Описание задачи 2", Status.NEW));
+        // Создаем две задачи
+        Task task1 = manager.createTask(new Task("Задача 1", "Описание задачи 1", Status.NEW));
+        Task task2 = manager.createTask(new Task("Задача 2", "Описание задачи 2", Status.NEW));
 
-            Epic epic1 = manager.createEpic(new Epic("Эпик 1", "Описание эпика 1"));
-            Subtask subtask1 = manager.createSubtask(new Subtask("Подзадача 1", "Описание подзадачи 1", Status.NEW, epic1.getId()));
-            Subtask subtask2 = manager.createSubtask(new Subtask("Подзадача 2", "Описание подзадачи 2", Status.NEW, epic1.getId()));
+        // Создаем эпик с тремя подзадачами
+        Epic epic1 = manager.createEpic(new Epic("Эпик с подзадачами", "Описание эпика 1"));
+        Subtask subtask1 = manager.createSubtask(new Subtask("Подзадача 1", "Описание 1", Status.NEW, epic1.getId()));
+        Subtask subtask2 = manager.createSubtask(new Subtask("Подзадача 2", "Описание 2", Status.NEW, epic1.getId()));
+        Subtask subtask3 = manager.createSubtask(new Subtask("Подзадача 3", "Описание 3", Status.NEW, epic1.getId()));
 
-            Epic epic2 = manager.createEpic(new Epic("Эпик 2", "Описание эпика 2"));
-            Subtask subtask3 = manager.createSubtask(new Subtask("Подзадача 3", "Описание подзадачи 3", Status.NEW, epic2.getId()));
+        // Создаем эпик без подзадач
+        Epic epic2 = manager.createEpic(new Epic("Пустой эпик", "Описание эпика 2"));
 
-            printAllTasks(manager);
+        System.out.println("Создано:");
+        System.out.println(" - Задач: " + manager.getAllTasks().size());
+        System.out.println(" - Эпиков: " + manager.getAllEpics().size());
+        System.out.println(" - Подзадач: " + manager.getAllSubtasks().size());
 
-            System.out.println("\n=== Просмотр задач (формирование истории) ===");
+        System.out.println("\n=== Запрос задач в разном порядке ===");
 
-            // Просматриваем задачи для формирования истории
-            manager.getTaskById(task1.getId());
-            manager.getEpicById(epic1.getId());
-            manager.getSubtaskById(subtask1.getId());
+        // Запрашиваем задачи в разном порядке несколько раз
+        manager.getTaskById(task1.getId());
+        manager.getEpicById(epic1.getId());
+        manager.getSubtaskById(subtask1.getId());
+        manager.getTaskById(task2.getId());
+        manager.getSubtaskById(subtask2.getId());
 
-            System.out.println("История после первого просмотра:");
-            manager.getHistory().forEach(System.out::println);
+        System.out.println("История после первого раунда запросов:");
+        printHistory(manager.getHistory());
 
-            // Просматриваем ещё задачи
-            manager.getTaskById(task2.getId());
-            manager.getSubtaskById(subtask2.getId());
+        // Повторные запросы (должны убрать дубли)
+        manager.getTaskById(task1.getId());
+        manager.getEpicById(epic1.getId());
+        manager.getSubtaskById(subtask3.getId());
 
-            System.out.println("\nИстория после второго просмотра:");
-            manager.getHistory().forEach(System.out::println);
+        System.out.println("\nИстория после второго раунда запросов (без дублей):");
+        printHistory(manager.getHistory());
 
-            System.out.println("\n=== Проверка ограничения истории (10 элементов) ===");
+        System.out.println("\n=== Удаление задачи из истории ===");
 
-            // Создаём и просматриваем больше задач для проверки ограничения
-            for (int i = 3; i <= 12; i++) {
-                Task task = manager.createTask(new Task("Задача " + i, "Описание " + i, Status.NEW));
-                manager.getTaskById(task.getId());
-            }
+        // Удаляем задачу, которая есть в истории
+        System.out.println("Удаляем задачу 1...");
+        manager.deleteTaskById(task1.getId());
 
-            System.out.println("История после заполнения (должна содержать 10 элементов):");
-            System.out.println("Размер истории: " + manager.getHistory().size());
-            manager.getHistory().forEach(System.out::println);
+        System.out.println("История после удаления задачи 1:");
+        printHistory(manager.getHistory());
+
+        System.out.println("\n=== Удаление эпика с подзадачами ===");
+
+        // Удаляем эпик с подзадачами
+        System.out.println("Удаляем эпик с подзадачами...");
+        manager.deleteEpicById(epic1.getId());
+
+        System.out.println("История после удаления эпика:");
+        printHistory(manager.getHistory());
+
+        System.out.println("\nОсталось в менеджере:");
+        System.out.println(" - Задач: " + manager.getAllTasks().size());
+        System.out.println(" - Эпиков: " + manager.getAllEpics().size());
+        System.out.println(" - Подзадач: " + manager.getAllSubtasks().size());
+    }
+
+    private static void printHistory(List<Task> history) {
+        if (history.isEmpty()) {
+            System.out.println("История пуста");
+            return;
         }
 
-        private static void printAllTasks(TaskManager manager) {
-            System.out.println("Задачи:");
-            for (Task task : manager.getAllTasks()) {
-                System.out.println(task);
-            }
-            System.out.println("Эпики:");
-            for (Epic epic : manager.getAllEpics()) {
-                System.out.println(epic);
-                for (Subtask subtask : manager.getSubtasksByEpicId(epic.getId())) {
-                    System.out.println("--> " + subtask);
-                }
-            }
-            System.out.println("Подзадачи:");
-            for (Subtask subtask : manager.getAllSubtasks()) {
-                System.out.println(subtask);
-            }
-            System.out.println("История:");
-            for (Task task : manager.getHistory()) {
-                System.out.println(task);
-            }
+        for (int i = 0; i < history.size(); i++) {
+            Task task = history.get(i);
+            String typeName = task.getType().toString();
+            System.out.println((i + 1) + ". " + typeName + ": " + task.getName() + " (ID: " + task.getId() + ")");
         }
+    }
 }

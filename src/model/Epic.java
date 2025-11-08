@@ -1,13 +1,15 @@
 package model;
 
 import enums.Status;
-import model.Task;
+import enums.TaskType;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Epic extends Task {
     private List<Integer> subtaskIds;
+    private LocalDateTime endTime;
 
     public Epic(String name, String description) {
         super(name, description, Status.NEW);
@@ -19,36 +21,58 @@ public class Epic extends Task {
         this.subtaskIds = new ArrayList<>();
     }
 
+    @Override
+    public TaskType getType() {
+        return TaskType.EPIC;
+    }
+
+    @Override
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
+    }
+
     public List<Integer> getSubtaskIds() {
         return new ArrayList<>(subtaskIds);
     }
 
     public void setSubtaskIds(List<Integer> subtaskIds) {
-        this.subtaskIds = subtaskIds;
+        this.subtaskIds = new ArrayList<>(subtaskIds);
     }
 
     public void addSubtaskId(int subtaskId) {
+        if (subtaskIds == null) {
+            subtaskIds = new ArrayList<>();
+        }
         subtaskIds.add(subtaskId);
     }
 
     public void removeSubtaskId(int subtaskId) {
-        subtaskIds.remove(Integer.valueOf(subtaskId));
+        if (subtaskIds != null) {
+            subtaskIds.remove(Integer.valueOf(subtaskId));
+        }
     }
 
     public void clearSubtaskIds() {
-        subtaskIds.clear();
+        if (subtaskIds != null) {
+            subtaskIds.clear();
+        }
     }
 
     @Override
     public String toString() {
-        return "main.java.model.Epic{" +
+        return "Epic{" +
                 "name='" + name + '\'' +
                 ", description='" + description + '\'' +
                 ", id=" + id +
                 ", status=" + status +
-                ", subtaskIds=" + subtaskIds +
+                ", duration=" + duration +
+                ", startTime=" + startTime +
+                ", endTime=" + endTime +
+                ", subtaskIds=" + (subtaskIds != null ? subtaskIds : "[]") +
                 '}';
     }
-
-
 }
