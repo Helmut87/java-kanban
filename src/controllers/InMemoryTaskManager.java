@@ -8,6 +8,7 @@ import model.Subtask;
 import model.Task;
 import utils.Managers;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -76,18 +77,33 @@ public class InMemoryTaskManager implements TaskManager {
 
         List<Subtask> epicSubtasks = getSubtasksByEpicId(epicId);
 
+        if (epicSubtasks.isEmpty()) {
+            epic.setStartTime(null);
+            epic.setDuration(null);
+            epic.setEndTime(null);
+            return;
+        }
+
         LocalDateTime startTime = epicSubtasks.stream()
                 .map(Subtask::getStartTime)
                 .filter(Objects::nonNull)
                 .min(LocalDateTime::compareTo)
                 .orElse(null);
 
+        Duration duration = epicSubtasks.stream()
+                .map(Subtask::getDuration)
+                .filter(Objects::nonNull)
+                .reduce(Duration.ZERO, Duration::plus);
+
+        // Рассчитываем endTime как максимальное время окончания подзадач
         LocalDateTime endTime = epicSubtasks.stream()
                 .map(Subtask::getEndTime)
                 .filter(Objects::nonNull)
                 .max(LocalDateTime::compareTo)
                 .orElse(null);
 
+        epic.setStartTime(startTime);
+        epic.setDuration(duration);
         epic.setEndTime(endTime);
     }
 
@@ -194,9 +210,11 @@ public class InMemoryTaskManager implements TaskManager {
         for (Epic epic : epics.values()) {
             historyManager.remove(epic.getId());
             for (int subtaskId : epic.getSubtaskIds()) {
-                subtasks.remove(subtaskId);
-                historyManager.remove(subtaskId);
-                removeFromPrioritizedTasks(subtasks.get(subtaskId));
+                Subtask subtask = subtasks.remove(subtaskId);
+                if (subtask != null) {
+                    removeFromPrioritizedTasks(subtask);
+                    historyManager.remove(subtaskId);
+                }
             }
         }
         epics.clear();

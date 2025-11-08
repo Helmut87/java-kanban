@@ -3,7 +3,6 @@ package model;
 import enums.Status;
 import enums.TaskType;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,28 +24,6 @@ public class Epic extends Task {
     @Override
     public TaskType getType() {
         return TaskType.EPIC;
-    }
-
-    @Override
-    public Duration getDuration() {
-        if (subtaskIds == null || subtaskIds.isEmpty()) {
-            return Duration.ZERO;
-        }
-
-        long totalMinutes = subtaskIds.stream()
-                .mapToLong(id -> 60L)
-                .sum();
-
-        return Duration.ofMinutes(totalMinutes);
-    }
-
-    @Override
-    public LocalDateTime getStartTime() {
-        if (subtaskIds == null || subtaskIds.isEmpty()) {
-            return null;
-        }
-
-        return LocalDateTime.of(2024, 1, 1, 10, 0);
     }
 
     @Override
@@ -92,9 +69,9 @@ public class Epic extends Task {
                 ", description='" + description + '\'' +
                 ", id=" + id +
                 ", status=" + status +
-                ", duration=" + getDuration() +
-                ", startTime=" + getStartTime() +
-                ", endTime=" + getEndTime() +
+                ", duration=" + duration +
+                ", startTime=" + startTime +
+                ", endTime=" + endTime +
                 ", subtaskIds=" + (subtaskIds != null ? subtaskIds : "[]") +
                 '}';
     }
