@@ -1,75 +1,90 @@
 package handlers;
 
+import adapters.DurationAdapter;
+import adapters.LocalDateTimeAdapter;
 import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
+import com.google.gson.GsonBuilder;
 import com.sun.net.httpserver.HttpExchange;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Optional;
+import com.sun.net.httpserver.HttpHandler;
+import impl.TaskManager;
 
-public class BaseHttpHandler {
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.LocalDateTime;
+
+public abstract class BaseHttpHandler implements HttpHandler {
+    protected final TaskManager taskManager;
     protected final Gson gson;
 
-    public BaseHttpHandler(Gson gson) {
-        this.gson = gson;
+    public BaseHttpHandler(TaskManager taskManager) {
+        this.taskManager = taskManager;
+        this.gson = createGson();
     }
 
-    protected void sendText(HttpExchange exchange, String text, int statusCode) throws IOException {
-        byte[] response = text.getBytes(StandardCharsets.UTF_8);
-        exchange.getResponseHeaders().add("Content-Type", "application/json;charset=utf-8");
-        exchange.sendResponseHeaders(statusCode, response.length);
-        exchange.getResponseBody().write(response);
-        exchange.close();
+    private Gson createGson() {
+        return new GsonBuilder()
+                .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
+                .registerTypeAdapter(Duration.class, new DurationAdapter())
+                .setPrettyPrinting()
+                .create();
     }
 
-    protected void sendSuccess(HttpExchange exchange, String text) throws IOException {
-        sendText(exchange, text, 200);
+    protected void sendSuccess(HttpExchange exchange, String response) throws IOException {
+        sendResponse(exchange, response, 200);
     }
 
-    protected void sendCreated(HttpExchange exchange, String text) throws IOException {
-        sendText(exchange, text, 201);
-    }
-
-    protected void sendNotFound(HttpExchange exchange) throws IOException {
-        sendText(exchange, "{\"error\": \"Not found\"}", 404);
-    }
-
-    protected void sendHasInteractions(HttpExchange exchange) throws IOException {
-        sendText(exchange, "{\"error\": \"Task time overlaps with existing tasks\"}", 406);
-    }
-
-    protected void sendInternalError(HttpExchange exchange) throws IOException {
-        sendText(exchange, "{\"error\": \"Internal server error\"}", 500);
+    protected void sendCreated(HttpExchange exchange, String response) throws IOException {
+        sendResponse(exchange, response, 201);
     }
 
     protected void sendBadRequest(HttpExchange exchange, String message) throws IOException {
-        sendText(exchange, "{\"error\": \"" + message + "\"}", 400);
+        sendResponse(exchange, message, 400);
     }
 
-    protected <T> Optional<T> parseJson(HttpExchange exchange, Class<T> clazz) throws IOException {
-        try (InputStream inputStream = exchange.getRequestBody()) {
-            String body = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-            return Optional.ofNullable(gson.fromJson(body, clazz));
-        } catch (JsonSyntaxException e) {
-            return Optional.empty();
+    protected void sendNotFound(HttpExchange exchange) throws IOException {
+        sendResponse(exchange, "Not Found", 404);
+    }
+
+    protected void sendMethodNotAllowed(HttpExchange exchange) throws IOException {
+        sendResponse(exchange, "Method Not Allowed", 405);
+    }
+
+    protected void sendInternalError(HttpExchange exchange) throws IOException {
+        sendResponse(exchange, "Internal Server Error", 500);
+    }
+
+    protected void sendHasInteractions(HttpExchange exchange) throws IOException {
+        sendResponse(exchange, "Task has time interactions with existing tasks", 406);
+    }
+
+    private void sendResponse(HttpExchange exchange, String response, int statusCode) throws IOException {
+        exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
+        byte[] responseBytes = response.getBytes(StandardCharsets.UTF_8);
+        exchange.sendResponseHeaders(statusCode, responseBytes.length);
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(responseBytes);
         }
     }
 
-    protected String getPathParameter(HttpExchange exchange, int index) {
-        String[] pathParts = exchange.getRequestURI().getPath().split("/");
-        if (pathParts.length > index) {
-            return pathParts[index];
+    protected String getPathId(String path) {
+        String[] pathParts = path.split("/");
+        if (pathParts.length > 2) {
+            return pathParts[2];
         }
         return null;
     }
 
-    protected int getIntPathParameter(HttpExchange exchange, int index) {
+    protected boolean isValidId(String id) {
+        if (id == null || id.isEmpty()) {
+            return false;
+        }
         try {
-            String param = getPathParameter(exchange, index);
-            return param != null ? Integer.parseInt(param) : -1;
+            Integer.parseInt(id);
+            return true;
         } catch (NumberFormatException e) {
-            return -1;
+            return false;
         }
     }
 }

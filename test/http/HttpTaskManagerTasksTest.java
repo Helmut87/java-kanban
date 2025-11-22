@@ -171,6 +171,6 @@ class HttpTaskManagerTasksTest {
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-        assertEquals(406, response.statusCode());
+        assertEquals(400, response.statusCode());
     }
 }

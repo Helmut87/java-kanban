@@ -1,21 +1,18 @@
 package handlers;
 
-import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
 import impl.TaskManager;
 import model.Subtask;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Optional;
 
-public class SubtasksHandler extends BaseHttpHandler implements HttpHandler {
-    private final TaskManager taskManager;
+public class SubtasksHandler extends BaseHttpHandler {
 
-    public SubtasksHandler(TaskManager taskManager, Gson gson) {
-        super(gson);
-        this.taskManager = taskManager;
+    public SubtasksHandler(TaskManager taskManager) {
+        super(taskManager);
     }
 
     @Override
@@ -35,7 +32,7 @@ public class SubtasksHandler extends BaseHttpHandler implements HttpHandler {
                     handleDelete(exchange, path);
                     break;
                 default:
-                    sendNotFound(exchange);
+                    sendMethodNotAllowed(exchange);
             }
         } catch (Exception e) {
             sendInternalError(exchange);
@@ -44,14 +41,17 @@ public class SubtasksHandler extends BaseHttpHandler implements HttpHandler {
 
     private void handleGet(HttpExchange exchange, String path) throws IOException {
         if (path.equals("/subtasks")) {
-            // Get all subtasks
             List<Subtask> subtasks = taskManager.getAllSubtasks();
             String response = gson.toJson(subtasks);
             sendSuccess(exchange, response);
         } else if (path.matches("/subtasks/\\d+")) {
-            // Get subtask by ID
-            int id = getIntPathParameter(exchange, 2);
-            Subtask subtask = taskManager.getSubtaskById(id);
+            String id = getPathId(path);
+            if (!isValidId(id)) {
+                sendBadRequest(exchange, "Invalid subtask ID");
+                return;
+            }
+
+            Subtask subtask = taskManager.getSubtaskById(Integer.parseInt(id));
             if (subtask != null) {
                 String response = gson.toJson(subtask);
                 sendSuccess(exchange, response);
@@ -64,43 +64,51 @@ public class SubtasksHandler extends BaseHttpHandler implements HttpHandler {
     }
 
     private void handlePost(HttpExchange exchange) throws IOException {
-        Optional<Subtask> subtaskOpt = parseJson(exchange, Subtask.class);
-        if (subtaskOpt.isEmpty()) {
-            sendBadRequest(exchange, "Invalid subtask data");
-            return;
-        }
+        try (InputStream inputStream = exchange.getRequestBody()) {
+            String body = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            Subtask subtask = gson.fromJson(body, Subtask.class);
 
-        Subtask subtask = subtaskOpt.get();
-        try {
+            if (subtask == null) {
+                sendBadRequest(exchange, "Invalid subtask data");
+                return;
+            }
+
             if (subtask.getId() == 0) {
                 // Create new subtask
-                Subtask created = taskManager.createSubtask(subtask);
-                if (created != null) {
-                    String response = gson.toJson(created);
+                Subtask createdSubtask = taskManager.createSubtask(subtask);
+                if (createdSubtask != null) {
+                    String response = gson.toJson(createdSubtask);
                     sendCreated(exchange, response);
                 } else {
-                    sendBadRequest(exchange, "Epic not found");
+                    sendHasInteractions(exchange);
                 }
             } else {
                 // Update existing subtask
-                taskManager.updateSubtask(subtask);
-                sendSuccess(exchange, "{\"message\": \"Subtask updated successfully\"}");
+                try {
+                    taskManager.updateSubtask(subtask);
+                    sendSuccess(exchange, gson.toJson(subtask));
+                } catch (IllegalArgumentException e) {
+                    sendHasInteractions(exchange);
+                }
             }
-        } catch (IllegalArgumentException e) {
-            sendHasInteractions(exchange);
+        } catch (Exception e) {
+            sendBadRequest(exchange, "Invalid JSON format");
         }
     }
 
     private void handleDelete(HttpExchange exchange, String path) throws IOException {
         if (path.equals("/subtasks")) {
-            // Delete all subtasks
             taskManager.deleteAllSubtasks();
-            sendSuccess(exchange, "{\"message\": \"All subtasks deleted\"}");
+            sendSuccess(exchange, "All subtasks deleted");
         } else if (path.matches("/subtasks/\\d+")) {
-            // Delete subtask by ID
-            int id = getIntPathParameter(exchange, 2);
-            taskManager.deleteSubtaskById(id);
-            sendSuccess(exchange, "{\"message\": \"Subtask deleted\"}");
+            String id = getPathId(path);
+            if (!isValidId(id)) {
+                sendBadRequest(exchange, "Invalid subtask ID");
+                return;
+            }
+
+            taskManager.deleteSubtaskById(Integer.parseInt(id));
+            sendSuccess(exchange, "Subtask deleted");
         } else {
             sendNotFound(exchange);
         }

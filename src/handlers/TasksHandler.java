@@ -1,21 +1,18 @@
 package handlers;
 
-import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
 import impl.TaskManager;
 import model.Task;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Optional;
 
-public class TasksHandler extends BaseHttpHandler implements HttpHandler {
-    private final TaskManager taskManager;
+public class TasksHandler extends BaseHttpHandler {
 
-    public TasksHandler(TaskManager taskManager, Gson gson) {
-        super(gson);
-        this.taskManager = taskManager;
+    public TasksHandler(TaskManager taskManager) {
+        super(taskManager);
     }
 
     @Override
@@ -35,7 +32,7 @@ public class TasksHandler extends BaseHttpHandler implements HttpHandler {
                     handleDelete(exchange, path);
                     break;
                 default:
-                    sendNotFound(exchange);
+                    sendMethodNotAllowed(exchange);
             }
         } catch (Exception e) {
             sendInternalError(exchange);
@@ -44,14 +41,17 @@ public class TasksHandler extends BaseHttpHandler implements HttpHandler {
 
     private void handleGet(HttpExchange exchange, String path) throws IOException {
         if (path.equals("/tasks")) {
-            // Get all tasks
             List<Task> tasks = taskManager.getAllTasks();
             String response = gson.toJson(tasks);
             sendSuccess(exchange, response);
         } else if (path.matches("/tasks/\\d+")) {
-            // Get task by ID
-            int id = getIntPathParameter(exchange, 2);
-            Task task = taskManager.getTaskById(id);
+            String id = getPathId(path);
+            if (!isValidId(id)) {
+                sendBadRequest(exchange, "Invalid task ID");
+                return;
+            }
+
+            Task task = taskManager.getTaskById(Integer.parseInt(id));
             if (task != null) {
                 String response = gson.toJson(task);
                 sendSuccess(exchange, response);
@@ -64,39 +64,51 @@ public class TasksHandler extends BaseHttpHandler implements HttpHandler {
     }
 
     private void handlePost(HttpExchange exchange) throws IOException {
-        Optional<Task> taskOpt = parseJson(exchange, Task.class);
-        if (taskOpt.isEmpty()) {
-            sendBadRequest(exchange, "Invalid task data");
-            return;
-        }
+        try (InputStream inputStream = exchange.getRequestBody()) {
+            String body = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            Task task = gson.fromJson(body, Task.class);
 
-        Task task = taskOpt.get();
-        try {
+            if (task == null) {
+                sendBadRequest(exchange, "Invalid task data");
+                return;
+            }
+
             if (task.getId() == 0) {
                 // Create new task
-                Task created = taskManager.createTask(task);
-                String response = gson.toJson(created);
-                sendCreated(exchange, response);
+                Task createdTask = taskManager.createTask(task);
+                if (createdTask != null) {
+                    String response = gson.toJson(createdTask);
+                    sendCreated(exchange, response);
+                } else {
+                    sendHasInteractions(exchange);
+                }
             } else {
                 // Update existing task
-                taskManager.updateTask(task);
-                sendSuccess(exchange, "{\"message\": \"Task updated successfully\"}");
+                try {
+                    taskManager.updateTask(task);
+                    sendSuccess(exchange, gson.toJson(task));
+                } catch (IllegalArgumentException e) {
+                    sendHasInteractions(exchange);
+                }
             }
-        } catch (IllegalArgumentException e) {
-            sendHasInteractions(exchange);
+        } catch (Exception e) {
+            sendBadRequest(exchange, "Invalid JSON format");
         }
     }
 
     private void handleDelete(HttpExchange exchange, String path) throws IOException {
         if (path.equals("/tasks")) {
-            // Delete all tasks
             taskManager.deleteAllTasks();
-            sendSuccess(exchange, "{\"message\": \"All tasks deleted\"}");
+            sendSuccess(exchange, "All tasks deleted");
         } else if (path.matches("/tasks/\\d+")) {
-            // Delete task by ID
-            int id = getIntPathParameter(exchange, 2);
-            taskManager.deleteTaskById(id);
-            sendSuccess(exchange, "{\"message\": \"Task deleted\"}");
+            String id = getPathId(path);
+            if (!isValidId(id)) {
+                sendBadRequest(exchange, "Invalid task ID");
+                return;
+            }
+
+            taskManager.deleteTaskById(Integer.parseInt(id));
+            sendSuccess(exchange, "Task deleted");
         } else {
             sendNotFound(exchange);
         }
