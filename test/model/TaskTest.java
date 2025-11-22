@@ -1,10 +1,13 @@
 package model;
 
 import enums.Status;
+import enums.TaskType;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import java.time.Duration;
+import java.time.LocalDateTime;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class TaskTest {
 
@@ -41,5 +44,41 @@ class TaskTest {
         Task task2 = new Task("Task", "Description", 2, Status.NEW);
 
         assertNotEquals(task1, task2, "Задачи с разными ID не должны быть равны");
+    }
+
+    @Test
+    void shouldCalculateEndTimeCorrectly() {
+        LocalDateTime startTime = LocalDateTime.of(2024, 1, 1, 10, 0);
+        Duration duration = Duration.ofHours(2);
+        Task task = new Task("Task", "Description", 1, Status.NEW, duration, startTime);
+
+        assertEquals(startTime.plus(duration), task.getEndTime());
+    }
+
+    @Test
+    void shouldReturnNullEndTimeWhenNoStartTime() {
+        Task task = new Task("Task", "Description", 1, Status.NEW);
+        task.setDuration(Duration.ofHours(2));
+
+        assertNull(task.getEndTime());
+    }
+
+    @Test
+    void shouldReturnNullEndTimeWhenNoDuration() {
+        Task task = new Task("Task", "Description", 1, Status.NEW);
+        task.setStartTime(LocalDateTime.now());
+
+        assertNull(task.getEndTime());
+    }
+
+    @Test
+    void shouldReturnCorrectTaskType() {
+        Task task = new Task("Task", "Description", Status.NEW);
+        Epic epic = new Epic("Epic", "Description");
+        Subtask subtask = new Subtask("Subtask", "Description", Status.NEW, 1);
+
+        assertEquals(TaskType.TASK, task.getType());
+        assertEquals(TaskType.EPIC, epic.getType());
+        assertEquals(TaskType.SUBTASK, subtask.getType());
     }
 }
